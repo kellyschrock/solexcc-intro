@@ -2,50 +2,54 @@
 
 Solex CC is essentially an "app environment" for companion computers running on MAVLink-based vehicles (planes, copters, rovers, boats, etc).
 
-# Companion Computers FTW
+# Initial idea
 
-There are a lot of things a MAVLink drone can do without a companion computer. ArduPilot, for example, has a lot of features for interacting with sensors, LEDs, ground-control software, and other systems, all built into the autopilot software. There's even a scripting interface built into it, using the Lua language.
+In 2015, 3DR released the Solo copter. It used an early version of the Cube flight controller and had an i.MX6 processor on it too, acting as a 
+"companion computer". The companion computer was essentially a small Linux machine, and had a Python runtime on it along with libraries for dealing with
+MAVLink messages and maintaining an interface to the flight controller.
 
-But what if you have an idea for something else? Maybe it's connecting to a sensor that ArduPilot doesn't support. Maybe you need to use a sensor for some purpose other than what ArduPilot would use it for. Maybe you want to make your vehicle do something that ArduPilot doesn't do already. Maybe you want more control over something than you would get via ArduPilot's interface. Maybe you're just experimenting with an idea and want to see results quickly to validate some idea you have. You have choices in this case.
+One of the Solo's features were its "Smart Shots", which were implemented as Python scripts that could be run via an interface on the ground station app.
+The Smart Shots were able to automate certain functions on the Solo, allowing it to fly around and take cinematic shots by itself, with less flying skill 
+needed on the part of the pilot.
 
+It always seemed that this idea (connected scripts running on the vehicle) could be expanded upon to include more capability, and be easier for a _user_ to
+change and augment however they see fit. In essence, you could have an easily-programmable vehicle.
 
-## The direct route
+That's where the initial idea for Solex CC came from. As for expanding on the idea, there are several things Solex CC can do that are either not possible with the Solo environment, or somewhat difficult
 
-The direct route follows a path similar to this:
+## Easily install, enable, disable, or remove scripts
 
-1. Download the ArduPilot source code.
-2. Figure out where to make the modifications you want in the 4000+ files in the source tree.
-3. Make those modifications and test them.
+On the Solo, installing a new Smart Shot would involve modifying several files on the vehicle to make reference to the new smart shot, uploading your script file(s)
+to the appropriate directories, and then modifying the GCS application (3DR Solo app or Solex) with a custom UI flow to make use of the smart shot. This is obviously not impossible, but does involve a lot of moving parts, not to mention cooperation between multiple parties. If all you're after is something simple, or validating an idea you have, this is a lot of work for potentially little reward.
 
-Assuming your idea is appropriate for inclusion in ArduPilot itself (few of them are), you may want to see about getting it merged into the main ArduPilot source tree. In that case, you can undertake the process of getting your modification merged. Start by locating an "influencer" on the ArduPilot team, and they can walk you through the process of selling your idea to whoever is tasked with reviewing your modification and maybe merging it. You can reach out to them on Skype, something called "mumble", or by posting a message in a forum somewhere and hoping it sparks a discussion big enough to get the attention of your chosen influencer. Then you can make a pull request, which they'll help you create so it's exactly right and less likely to get rejected. Next comes the review process, which can span multiple months. (These people are busy, in part because of so many people using this "direct" route for their ideas.) So it's a good idea to periodically check on the progress of your PR and see if anyone has looked at it and perhaps remind someone that the PR is still in need of review. Fail to do this, and your modification may linger for over a year and finally be abandoned. An alternative is to pay one of the ArduPilot developers to implement your idea for you. 
+Solex CC's "worker" scripts (the scripts that implement custom functions) all work according to a consistent interface to and from the ground station and vehicle,
+so no modifications on Solex CC itself are required for installing a new script. The basic steps are:
 
-In any case, you may reach a point where your feature requires some kind of new user-interface element in a GCS in order to use it. In that case, once your idea has reached this point, you can alter your GCS to include access to the new feature.
+1. Write and test the script, giving it a unique ID within the system.
+2. Zip it into a .zip file.
+3. Open Solex CC's web interface, and click the "Install" button.
+4. Select the .zip file you created, and upload it.
+5. Wait a few seconds
 
-## The "Solex CC" route
+Your script is now installed and functional.
 
-With Solex CC, the intention is for the path from "idea" to "it actually works" to be shorter. The basic steps are:
+## UI Customization
 
-1. (First time only) follow the steps in "Hardware setup" below to install a companion computer on your vehicle. Be prepared to spend at least $35 in this step.
-2. Write a worker script to provide an interface between your chosen hardware, the autopilot, and the GCS. This can be anything, really... some kind of sensor, an actuator, a specific camera, or just something to control the vehicle itself in a specific way. You can interface with the vehicle, any external hardware supported by your companion computer, and you can also create user-interface elements for specific screens in an appropriately-instrumented GCS (such as Solex).
-3. Install the worker on your vehicle via Solex CC's web interface. 
-4. Connect to your vehicle via Solex or some other GCS with SolexCC support (if not already connected).
-5. Use the new UI elements that automatically appear in the GCS to make use of your new features.
-6. Test and debug your feature using Solex CC's web interface, or various testing-related features are in Solex.
+In most GCS applications, a major drawback of a flexible scripting environment is that in order to use a new feature, the GCS app has to be modified to take advantage of the feature. Suppose, for example, that you want to write a script to capture output from a sensor attached to the vehicle and log it during a flight, then prompt the user to download that content at the end of the flight. In a Solo-like environment, you'd need to build all of that explicitly. Again, obviously not impossible, but not exactly trivial to do.
 
-When you've finished your experiment and decide that you don't need it anymore, you can disable or remove the worker. And it, along with all related functions, disappears. Just re-enable it when you need it again.
+In Solex CC, worker scripts can create UI elements themselves. You can define anything from a simple button on an exsiting panel to entire screens, including sliders, entry fields, icons, buttons, check boxes, radio buttons, and so on. The UI definitions also tell Solex (or a similarly-equipped app) what to do when the user interacts with these elements, in which case a worker script becomes part of the GCS app's UI. So, in that case, Solex will behave as if it's designed to perform that specific function, when in reality it's the _vehicle_ controlling the UI for that function.
 
-The difference in time and effort between these approaches is substantial. The direct route can take a while. The Solex CC route can take minutes to hours, depending on how complex and involved your feature is.
+## Code in any language you like
 
-Overall: If you want to use your vehicle in ways beyond what its creators intended without a lot of messing around, this is a pretty handy way to do it.
+Solex CC runs on the Node JS environment, so its reasonable to assume that this means you have to write worker scripts in JavaScript or TypeScript, or other languages supported by Node. Technically, this is true; worker scripts are loaded as modules via `require` dynamically at runtime, and their interface to the rest of the system is via JSON messages. The good news is that this part is really simple and easy. If you prefer to write your worker in something else (C, C++, Python, etc), you can do that as well, and provide a "shell" interface from the worker script to your code. The [Examples](https://github.com/kellyschrock/solexcc-example-workers) repository contains a few examples of how this is done.
 
-# Hardware Setup
+## Ease of testing
 
-Solex CC can run on anything that can handle a Node JS environment. This includes everything from a $35 Raspberry Pi to full-blown server-sized PC. A Raspberry Pi is a good place to start. Even a Pi Zero will work, but it's really slow. A Raspberry Pi 4 is a better choice. It's also been run on a variety of NVIDIA devices (Jetson, Nano), which is useful if you need more speed.
+There is a short setup process involved for setting up to test worker scripts. Essentially, you put Solex CC on your computer, in which case it acts as the 
+"companion computer" in your testing setup. Set up SITL to act as the "vehicle" in your setup, using any of the vehicle types (Copter, Plane, or Rover). Finally, run Solex on a device on the same WiFi network as SITL on your computer. Start SITL and start Solex CC, then connect to them both with Solex. Now you can develop and test your code without putting any vehicles at risk, and see immediate feedback.
 
-Once you get a copy of Solex CC, you can follow the tutorials for setting it up.
+## Runs on any hardware
 
-# Examples
-
-There are a lot of examples about how you might write a worker to do various things, in the [Examples Repo](https://github.com/kellyschrock/solexcc-example-workers).
+Solex CC runs on anything that will run Node JS, so it can run on anything from a Pi Zero to a Jetson, to a PC. Strictly speaking, a Pi Zero will run Solex CC, but its performance (as with anything that runs on a Pi Zero) will be noticeably slower than it is on higher-powered devices.
 
 
